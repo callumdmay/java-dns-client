@@ -1,7 +1,7 @@
 import java.util.Random;
 
 
-public class DnsPacket {
+public class DnsRequest {
 
 	private Random rand;
 	private String domain;
@@ -9,7 +9,7 @@ public class DnsPacket {
 
 	public enum QUERYTYPE { HOSTADDRESS, NAMESERVER, MAILSERVER }
 
-	public DnsPacket(String domain, QUERYTYPE type){
+	public DnsRequest(String domain, QUERYTYPE type){
 		rand = new Random();
 		this.domain = domain;
 		this.type = type;
