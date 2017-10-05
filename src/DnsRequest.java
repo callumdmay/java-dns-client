@@ -3,16 +3,14 @@ import java.util.Random;
 
 public class DnsPacket {
 
-	private boolean request;
 	private Random rand;
 	private String domain;
 	private QUERYTYPE type;
 
 	public enum QUERYTYPE { HOSTADDRESS, NAMESERVER, MAILSERVER }
 
-	public DnsPacket(boolean request, String domain, QUERYTYPE type){
+	public DnsPacket(String domain, QUERYTYPE type){
 		rand = new Random();
-		this.request = request;
 		this.domain = domain;
 		this.type = type;
 	}
