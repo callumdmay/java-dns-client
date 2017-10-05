@@ -21,13 +21,17 @@ public class DnsClient {
 
     public DnsClient(String args[]) {
         this.parseInputArguments(args);
-        System.out.println(query);
-        System.out.println(timeout);
-        System.out.println(maxRetries);
-        System.out.println(server);
-        System.out.println(name);
+        if (server == null || name == null) {
+            throw new IllegalArgumentException("Server IP and domain name must be provided.");
+        }
     }
 
+    public void makeRequest() {
+        System.out.println("DnsClient sending request for " + name);
+        System.out.println("Server: " + server);
+        System.out.println("Request type: " + query);
+
+    }
     private void parseInputArguments(String args[]) {
         List<String> argsList = Arrays.asList(args);
         ListIterator<String> iterator = argsList.listIterator();
