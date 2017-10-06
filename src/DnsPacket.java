@@ -6,11 +6,9 @@ public class DnsPacket {
 	private boolean request;
 	private Random rand;
 	private String domain;
-	private QUERYTYPE type;
+	private QueryType type;
 
-	public enum QUERYTYPE { HOSTADDRESS, NAMESERVER, MAILSERVER }
-
-	public DnsPacket(boolean request, String domain, QUERYTYPE type){
+	public DnsPacket(boolean request, String domain, QueryType type){
 		rand = new Random();
 		this.request = request;
 		this.domain = domain;
@@ -68,10 +66,10 @@ public class DnsPacket {
 		return question;
 	}
 	
-	private char hexFromType(QUERYTYPE type){
-		if(type == QUERYTYPE.HOSTADDRESS){
+	private char hexFromType(QueryType type){
+		if(type == QueryType.IP){
 			return '1';
-		}else if(type == QUERYTYPE.MAILSERVER){
+		}else if(type == QueryType.MX){
 			return '2';
 		}else {
 			return 'F';

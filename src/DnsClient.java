@@ -1,4 +1,3 @@
-import java.io.*;
 import java.net.*;
 import java.util.Arrays;
 import java.util.List;
@@ -6,16 +5,11 @@ import java.util.ListIterator;
 
 public class DnsClient {
 
-    private enum Query  {
-        IP,
-        MX,
-        NS
-    }
-
-    private Query query = Query.IP;
+    public QueryType queryType = QueryType.IP;
     private int timeout = 5;
     private int maxRetries = 3;
-    private String server;
+    private byte[] server = new byte[4];
+    String address;
     private String name;
     private int port = 53;
 
@@ -28,9 +22,21 @@ public class DnsClient {
 
     public void makeRequest() {
         System.out.println("DnsClient sending request for " + name);
-        System.out.println("Server: " + server);
-        System.out.println("Request type: " + query);
+        System.out.println("Server: " + address);
+        System.out.println("Request type: " + queryType);
+        DatagramSocket socket;
+        try {
+            socket = new DatagramSocket();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
 
+        InetAddress address;
+        try {
+            address = InetAddress.getByAddress(server);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
     }
     private void parseInputArguments(String args[]) {
         List<String> argsList = Arrays.asList(args);
@@ -49,14 +55,19 @@ public class DnsClient {
                     port = Integer.parseInt(iterator.next());
                     break;
                 case "-mx":
-                    query = Query.MX;
+                    queryType = QueryType.MX;
                     break;
                 case "-ns":
-                    query = Query.NS;
+                    queryType = QueryType.NS;
                     break;
                 default:
                     if (arg.contains("@")) {
-                        server = arg.substring(1);
+                        address = arg.substring(1);
+                        String[] addressComponents = address.split("\\.");
+
+                        for (int i = 0; i < addressComponents.length; i++) {
+                            server[i] = (byte) Integer.parseInt(addressComponents[i]);
+                        }
                         name = iterator.next();
                     }
                     break;
