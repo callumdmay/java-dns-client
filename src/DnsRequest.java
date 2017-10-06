@@ -1,16 +1,13 @@
 import java.util.Random;
 
 
-public class DnsPacket {
+public class DnsRequest {
 
-	private boolean request;
 	private Random rand;
 	private String domain;
 	private QueryType type;
-
-	public DnsPacket(boolean request, String domain, QueryType type){
+	public DnsRequest(String domain, QueryType type){
 		rand = new Random();
-		this.request = request;
 		this.domain = domain;
 		this.type = type;
 	}
