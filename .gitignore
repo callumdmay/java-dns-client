@@ -1,5 +1,5 @@
-.idea
 java-dns-client.iml
+.idea/workspace.xml
 
 # Compiled class file
 *.class
