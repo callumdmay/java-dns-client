@@ -7,6 +7,7 @@ import java.util.ListIterator;
 public class DnsClient {
 
     public QueryType queryType = QueryType.IP;
+    public int MAX_DNS_PACKET_SIZE = 512;
     private int timeout = 5000;
     private int maxRetries = 3;
     private byte[] server = new byte[4];
@@ -32,6 +33,9 @@ public class DnsClient {
             InetAddress inetaddress = InetAddress.getByAddress(server);
             DnsRequest request = new DnsRequest(address, queryType);
             byte[][] requestPacket = request.getRequest();
+            int answerLength = MAX_DNS_PACKET_SIZE - requestPacket.length * requestPacket[0].length;
+            DnsResponse response = new DnsResponse()
+
             System.out.println(requestPacket);
             byte[] receiveData = new byte[1024];
 
@@ -39,6 +43,7 @@ public class DnsClient {
             e.printStackTrace();
         }
     }
+
     private void parseInputArguments(String args[]) {
         List<String> argsList = Arrays.asList(args);
         ListIterator<String> iterator = argsList.listIterator();
