@@ -36,7 +36,7 @@ public class DnsRequest {
 		String hexQName = "";
 		
 		//first calculate how many bytes we need so we know the size of the array
-		String[] items = domain.split(".");
+		String[] items = domain.split("\\.");
 		for(int i=0; i < items.length; i ++){
 			if (i % 2 == 0){
 				hexQName += Integer.toHexString(items[i].length());
@@ -54,7 +54,7 @@ public class DnsRequest {
 		byte[][] question = new byte[QNameRows + 2][16];
 		
 		//go through QNameRows and fill the question byte array
-		for(int i = 0; i < QNameRows; i ++){
+        for(int i = 0; i < QNameRows; i ++){
 			question[i] = hexStringToByteArray(hexQName.substring(i*2, i*2 + 1));
 		}
 		question[QNameRows] = hexStringToByteArray("000" + hexFromType(type));
@@ -73,12 +73,12 @@ public class DnsRequest {
 		}
 	}
 	private byte[] randomID(){
-		//65536 is max value for 16 bit no.
-		return hexStringToByteArray(Integer.toHexString(rand.nextInt(65536)));
+		//65535 is max value for 16 bit no. minus 1, need to offset against an id value of 0;
+		return hexStringToByteArray(Integer.toHexString(rand.nextInt(65535) + 1));
 	}
 
 	private static byte[] hexStringToByteArray(String s) {
-	    int len = s.length();
+		int len = s.length();
 	    byte[] data = new byte[len / 2];
 	    for (int i = 0; i < len; i += 2) {
 	        data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)

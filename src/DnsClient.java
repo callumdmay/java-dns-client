@@ -24,17 +24,16 @@ public class DnsClient {
         System.out.println("DnsClient sending request for " + name);
         System.out.println("Server: " + address);
         System.out.println("Request type: " + queryType);
-        DatagramSocket socket;
-        try {
-            socket = new DatagramSocket();
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
 
-        InetAddress address;
         try {
-            address = InetAddress.getByAddress(server);
-        } catch (UnknownHostException e) {
+            DatagramSocket socket = new DatagramSocket();
+            InetAddress inetaddress = InetAddress.getByAddress(server);
+            DnsRequest request = new DnsRequest(address, queryType);
+            byte[][] requestPacket = request.getRequest();
+            System.out.println(requestPacket);
+            byte[] receiveData = new byte[1024];
+
+        } catch (SocketException | UnknownHostException e) {
             e.printStackTrace();
         }
     }
