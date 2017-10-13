@@ -1,4 +1,5 @@
 import java.net.*;
+import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
@@ -6,7 +7,7 @@ import java.util.ListIterator;
 public class DnsClient {
 
     public QueryType queryType = QueryType.IP;
-    private int timeout = 5;
+    private int timeout = 5000;
     private int maxRetries = 3;
     private byte[] server = new byte[4];
     String address;
@@ -27,6 +28,7 @@ public class DnsClient {
 
         try {
             DatagramSocket socket = new DatagramSocket();
+            socket.setSoTimeout(timeout);
             InetAddress inetaddress = InetAddress.getByAddress(server);
             DnsRequest request = new DnsRequest(address, queryType);
             byte[][] requestPacket = request.getRequest();
@@ -45,7 +47,7 @@ public class DnsClient {
             String arg = iterator.next();
             switch (arg) {
                 case "-t":
-                    timeout = Integer.parseInt(iterator.next());
+                    timeout = Integer.parseInt(iterator.next()) * 1000;
                     break;
                 case "-r":
                     maxRetries = Integer.parseInt(iterator.next());
@@ -65,7 +67,11 @@ public class DnsClient {
                         String[] addressComponents = address.split("\\.");
 
                         for (int i = 0; i < addressComponents.length; i++) {
-                            server[i] = (byte) Integer.parseInt(addressComponents[i]);
+                            int ipValue = Integer.parseInt(addressComponents[i]);
+                            if (ipValue < 0 || ipValue > 255) {
+                                throw new NumberFormatException("IP Address numbers must be between 0 and 255, inclusive.");
+                            }
+                            server[i] = (byte) ipValue;
                         }
                         name = iterator.next();
                     }
