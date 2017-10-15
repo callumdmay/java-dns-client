@@ -1,66 +1,69 @@
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 
 public class DnsRequest {
 
-	private Random rand;
 	private String domain;
 	private QueryType type;
 	public DnsRequest(String domain, QueryType type){
-		rand = new Random();
 		this.domain = domain;
 		this.type = type;
 	}
 
-	public byte[][] getRequest(){
-		byte[][] header = createRequestHeader();
-		byte[][] question = createQuestionHeader();
-		byte[][] request = new byte[header.length + question.length][];
-        System.arraycopy(header, 0, request, 0, header.length);
-        System.arraycopy(question, 0, request, header.length, request.length);
-        return request;
+	public byte[] getRequest(){
+		int qNameLength = getQNameLength();
+		ByteBuffer request = ByteBuffer.allocate(12 + 5 + qNameLength);
+		request.put(createRequestHeader());
+		request.put(createQuestionHeader(qNameLength));
+        return request.array();
 	}
 
-	private byte[][] createRequestHeader(){
-		byte[][] header = new byte[6][16];
-		header[0] = randomID();
-		header[1] = hexStringToByteArray("8100");
-		header[2] = hexStringToByteArray("0001");
+	private byte[] createRequestHeader(){
+		ByteBuffer header = ByteBuffer.allocate(12);
+		byte[] randomID = new byte[2]; 
+		new Random().nextBytes(randomID);
+		header.put(randomID);
+		header.put((byte)0x01);
+		header.put((byte)0x00);
+		header.put((byte)0x00);
+		header.put((byte)0x01);
+		
 		//lines 3, 4, and 5 will be all 0s, which is what we want
-
-		return header;
+		return header.array();
 	}
 	
-	private byte[][] createQuestionHeader(){
-		
-		String hexQName = "";
+	private int getQNameLength(){
+		int byteLength = 0;
+		String[] items = domain.split("\\.");
+		for(int i=0; i < items.length; i ++){
+			// 1 byte length for the number value and then another for each character
+			//www.mcgill.ca = 3, w, w, w, 6, m, c, g, i, l, l, 2, c, a = 14 byteLength
+			byteLength += items[i].length() + 1;
+		}
+		return byteLength;
+	}
+
+	private byte[] createQuestionHeader(int qNameLength){
+		ByteBuffer question = ByteBuffer.allocate(qNameLength+5);
 		
 		//first calculate how many bytes we need so we know the size of the array
 		String[] items = domain.split("\\.");
 		for(int i=0; i < items.length; i ++){
-			if (i % 2 == 0){
-				hexQName += Integer.toHexString(items[i].length());
-			}else{
-				for (int j = 0; j < items[i].length(); j++){
-					hexQName += Integer.toHexString((int) items[i].charAt(j));
-				}
+			question.put((byte) items[i].length());
+			for (int j = 0; j < items[i].length(); j++){
+				question.put((byte) ((int) items[i].charAt(j)));
+				
 			}
 		}
-		hexQName += "00";
+		question.put((byte) 0x00);
 
-		//Length of QName affects how many rows we need
-		int QNameRows = (int) Math.ceil(hexQName.length() / 4.);
-		
-		byte[][] question = new byte[QNameRows + 2][16];
-		
 		//go through QNameRows and fill the question byte array
-        for(int i = 0; i < QNameRows; i ++){
-			question[i] = hexStringToByteArray(hexQName.substring(i*2, i*2 + 1));
-		}
-		question[QNameRows] = hexStringToByteArray("000" + hexFromType(type));
-		question[QNameRows + 1] = hexStringToByteArray("0001");
-		
-		return question;
+		question.put(hexStringToByteArray("000" + hexFromType(type)));
+		question.put((byte) 0x00);
+		question.put((byte) 0x01);
+
+		return question.array();
 	}
 	
 	private char hexFromType(QueryType type){
@@ -71,10 +74,6 @@ public class DnsRequest {
 		}else {
 			return 'F';
 		}
-	}
-	private byte[] randomID(){
-		//65535 is max value for 16 bit no. minus 1, need to offset against an id value of 0;
-		return hexStringToByteArray(Integer.toHexString(rand.nextInt(65535) + 1));
 	}
 
 	private static byte[] hexStringToByteArray(String s) {

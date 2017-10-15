@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.net.*;
 import java.text.NumberFormat;
 import java.util.Arrays;
@@ -32,16 +33,27 @@ public class DnsClient {
             socket.setSoTimeout(timeout);
             InetAddress inetaddress = InetAddress.getByAddress(server);
             DnsRequest request = new DnsRequest(address, queryType);
-            byte[][] requestPacket = request.getRequest();
-            int answerLength = MAX_DNS_PACKET_SIZE - requestPacket.length * requestPacket[0].length;
-            DnsResponse response = new DnsResponse()
+            byte[] requestBytes = request.getRequest();
+//            int answerLength = MAX_DNS_PACKET_SIZE - requestBytes.length;
+//            DnsResponse response = new DnsResponse()
+            
+            DatagramPacket requestPacket = new DatagramPacket(requestBytes, requestBytes.length, inetaddress, 53);
+            
+            socket.send(requestPacket);
 
-            System.out.println(requestPacket);
-            byte[] receiveData = new byte[1024];
-
+            byte[] responseBytes = new byte[1024];
+            DatagramPacket responsePacket = new DatagramPacket(responseBytes, responseBytes.length);
+            socket.receive(responsePacket);
+            System.out.println("\n\nReceived: " + responsePacket.getLength() + " bytes");
+            
+            DnsResponse response = new DnsResponse(responsePacket.getData());
+            response.parseResponse();
+            
         } catch (SocketException | UnknownHostException e) {
             e.printStackTrace();
-        }
+        } catch (IOException e) {
+			e.printStackTrace();
+		}
     }
 
     private void parseInputArguments(String args[]) {
