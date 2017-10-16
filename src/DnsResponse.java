@@ -11,15 +11,25 @@ public class DnsResponse {
 		this.response = response;
 		this.requestSize = requestSize;
     	result = new ResponseResult();
+        parseHeader();
+        parseQuestion();
+        parseAnswer();
     }
 
-    public ResponseResult parseResponse() {
-    	parseHeader();
-    	parseQuestion();
-    	parseAnswer();
-    	
-    	return result;
-    }
+    public void outputResponse() {
+        if (result.getANCount() > 0){
+            System.out.println("***Answer Section (" + result.getANCount() + " records)***");
+            String authString = result.isAA() ? "auth" : "nonauth";
+            System.out.println("IP\t" + result.getIp_address() + "\t" + result.getAns_ttl() + "\t" + authString);
+
+            //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
+        }
+
+        if (result.getARCount() > 0){
+            System.out.println("***Additional Section ([num-additional] records)***");
+            //TODO:
+        }
+	}
 
     private void parseAnswer(){
     	String domain = "";

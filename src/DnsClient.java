@@ -18,7 +18,7 @@ public class DnsClient {
     public DnsClient(String args[]) {
         this.parseInputArguments(args);
         if (server == null || name == null) {
-            throw new IllegalArgumentException("Server IP and domain name must be provided.");
+            throw new IllegalArgumentException("Incorrect input syntax: Server IP and domain name must be provided.");
         }
     }
 
@@ -31,7 +31,7 @@ public class DnsClient {
 
     private void pollRequest(int retryNumber) {
         if (retryNumber > maxRetries) {
-            System.out.println("Max retry number exceeded.");
+            System.out.println("Maximum number of retries " + maxRetries+ " exceeded");
             return;
         }
 
@@ -57,19 +57,7 @@ public class DnsClient {
             System.out.println("Response received after " + (endTime - startTime)/1000. + " seconds");
 
             DnsResponse response = new DnsResponse(responsePacket.getData(), requestBytes.length);
-            ResponseResult result = response.parseResponse();
-            if (result.getANCount() > 0){
-                System.out.println("***Answer Section (" + result.getANCount() + " records)***");
-                String authString = result.isAA() ? "auth" : "nonauth";
-                System.out.println("IP\t" + result.getIp_address() + "\t" + result.getAns_ttl() + "\t" + authString);
-
-                //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
-            }
-
-            if (result.getARCount() > 0){
-                System.out.println("***Additional Section ([num-additional] records)***");
-                //TODO:
-            }
+            response.outputResponse();
 
         } catch (SocketException e) {
             System.out.println("Error creating socket.");
@@ -113,7 +101,7 @@ public class DnsClient {
                         for (int i = 0; i < addressComponents.length; i++) {
                             int ipValue = Integer.parseInt(addressComponents[i]);
                             if (ipValue < 0 || ipValue > 255) {
-                                throw new NumberFormatException("IP Address numbers must be between 0 and 255, inclusive.");
+                                throw new NumberFormatException("Incorrect input syntax: IP Address numbers must be between 0 and 255, inclusive.");
                             }
                             server[i] = (byte) ipValue;
                         }
