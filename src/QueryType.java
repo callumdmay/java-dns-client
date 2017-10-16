@@ -1,5 +1,5 @@
 public enum QueryType {
-    IP,
+    A,
     MX,
     NS
 }

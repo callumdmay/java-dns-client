@@ -67,7 +67,7 @@ public class DnsRequest {
 	}
 	
 	private char hexFromType(QueryType type){
-		if(type == QueryType.IP){
+		if(type == QueryType.A){
 			return '1';
 		}else if(type == QueryType.MX){
 			return '2';

@@ -1,3 +1,5 @@
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
 public class DnsResponse {
@@ -21,23 +23,25 @@ public class DnsResponse {
 
     private void parseAnswer(){
     	String domain = "";
-    	int countByte = requestSize;
-    	int wordSize = response[countByte];
+    	int countByte = requestSize; //start byte
     	
-    	while(wordSize > 0){
-    		for(int i =0; i < wordSize; i++){
-    			domain += (char) response[countByte];
-    			countByte +=1;
-    		}
-    		wordSize = response[countByte + 1];
-    			
-    		if (wordSize != 0){
-    			domain += ".";	
-    		}
-    		countByte += 1;
+    	//check if offset
+    	if((response[countByte] & 0xC0) == (int) 0xC0){
+//    		byte[] test = { response[countByte] };
+//    		System.out.println(javax.xml.bind.DatatypeConverter.printHexBinary(test));
+        	byte[] offset = { (byte) (response[countByte] & 0x3F), response[countByte + 1] };
+        	ByteBuffer wrapped = ByteBuffer.wrap(offset);
+    		//get offset and then get name starting at that point
+    		domain = getDomainFromIndex(wrapped.getShort());
+    		countByte += 2;
+    	}else{
+    		domain = getDomainFromIndex(countByte);
+    		countByte += domain.length();
     	}
+    	
     	//Name
     	result.setAns_name(domain);
+    	
     	
     	//TYPE
     	byte[] ans_type = new byte[2];
@@ -64,6 +68,19 @@ public class DnsResponse {
     	wrapped = ByteBuffer.wrap(RDLength);
     	int rdLength = wrapped.getShort();
     	result.setAns_rdLength(rdLength);
+    	
+    	countByte +=2;
+    	
+    	if (rdLength == 4){
+    		byte[] IPAddress = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
+    		try {
+				InetAddress inetaddress = InetAddress.getByAddress(IPAddress);
+				result.setIp_address(inetaddress.toString().substring(1));
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
     }
 
     private void parseQuestion(){
@@ -93,7 +110,7 @@ public class DnsResponse {
     	//RA
     	result.setRA(getBit(response[3], 7) == 1);
     	
-    	//RCODE TODO check this
+    	//RCODE
     	result.setRCode(response[3] & 0x0F);
     	
     	//QDCount
@@ -117,6 +134,23 @@ public class DnsResponse {
     	result.setARCount(wrapped.getShort());
     }
 
+    private String getDomainFromIndex(int index){
+    	int wordSize = response[index];
+    	String domain = "";
+
+    	while(wordSize > 0){
+    		for(int i =0; i < wordSize; i++){
+    			domain += (char) response[index + i + 1];
+    		}
+    		index += wordSize + 1;
+    		wordSize = response[index];
+    			
+    		if (wordSize != 0){
+    			domain += ".";	
+    		}
+    	}
+    	return domain;
+    }
     private int getBit(byte b, int position) {
     	return (b >> position) & 1;
     }

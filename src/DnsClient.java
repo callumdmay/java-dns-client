@@ -7,7 +7,7 @@ import java.util.ListIterator;
 
 public class DnsClient {
 
-    public QueryType queryType = QueryType.IP;
+    public QueryType queryType = QueryType.A;
     public int MAX_DNS_PACKET_SIZE = 512;
     private int timeout = 5000;
     private int maxRetries = 3;
@@ -27,48 +27,42 @@ public class DnsClient {
         System.out.println("DnsClient sending request for " + name);
         System.out.println("Server: " + address);
         System.out.println("Request type: " + queryType);
-
+        //TODO: need to do retries, currently just does once.
         try {
+        	//TODO: I think a bunch of the below stuff shouldn't even be in the try catch
             DatagramSocket socket = new DatagramSocket();
             socket.setSoTimeout(timeout);
             InetAddress inetaddress = InetAddress.getByAddress(server);
             DnsRequest request = new DnsRequest(name, queryType);
+            
             byte[] requestBytes = request.getRequest();
-//            for(int i = 0; i < requestBytes.length; i++){
-//            	System.out.print(requestBytes[i] + ",");
-//            }
-//            System.out.println();
-//            System.out.print("REQUEST: ");
-//            for(int i = 0; i < requestBytes.length; i++){
-//            	System.out.print((char) requestBytes[i] + ",");
-//            }
-//            int answerLength = MAX_DNS_PACKET_SIZE - requestBytes.length;
-            
-            DatagramPacket requestPacket = new DatagramPacket(requestBytes, requestBytes.length, inetaddress, 53);
-            
-            socket.send(requestPacket);
-
             byte[] responseBytes = new byte[1024];
+            DatagramPacket requestPacket = new DatagramPacket(requestBytes, requestBytes.length, inetaddress, port);
             DatagramPacket responsePacket = new DatagramPacket(responseBytes, responseBytes.length);
-            socket.receive(responsePacket);
-            System.out.println("\n\nReceived: " + responsePacket.getLength() + " bytes");
-            
-            
-//            String s = new String(responsePacket.getData());
-//            System.out.print("RESPONSE: ");
-//            for(int i = 0; i < responsePacket.getData().length; i++){
-//            	System.out.print(responsePacket.getData()[i] + ",");
-//            }
-//            System.out.println();
-//            System.out.print("RESPONSE: ");
-//            for(int i = 0; i < responsePacket.getData().length; i++){
-//            	System.out.print((char) responsePacket.getData()[i] + ",");
-//            }
 
+            long startTime = System.currentTimeMillis();
+            socket.send(requestPacket);           
+            socket.receive(responsePacket);
+            long endTime = System.currentTimeMillis();
+            socket.close();
+
+            System.out.println("Response received after " + (endTime - startTime)/1000. + " seconds ([num-retries] retries)");
+            
             DnsResponse response = new DnsResponse(responsePacket.getData(), requestBytes.length);
             ResponseResult result = response.parseResponse();
-            System.out.println(result.toString());
+            if (result.getANCount() > 0){
+            	 System.out.println("***Answer Section (" + result.getANCount() + " records)***");
+            	 String authString = result.isAA() ? "auth" : "nonauth";
+            	 System.out.println("IP\t" + result.getIp_address() + "\t" + result.getAns_ttl() + "\t" + authString);
+            	 
+            	 //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
+            }
             
+            if (result.getARCount() > 0){
+            	System.out.println("***Additional Section ([num-additional] records)***");
+            	//TODO:
+            }
+
         } catch (SocketException | UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {

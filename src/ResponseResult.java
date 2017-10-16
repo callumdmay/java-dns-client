@@ -6,18 +6,19 @@ public class ResponseResult {
 	private boolean QR, AA, TC, RD, RA;
 	private byte OPCode;
 	private int RCode, QDCount, ANCount, NSCount, ARCount, ans_ttl, ans_rdLength;
-	private String ans_name;
+	private String ans_name, ip_address;
 	
 	@Override
 	public String toString() {
-		return "ResponseResult [ID=" + Arrays.toString(ID) + ", ans_type="
-				+ Arrays.toString(ans_type) + ", ans_class="
-				+ Arrays.toString(ans_class) + ", QR=" + QR + ", AA=" + AA
+		return "ResponseResult [ID=" + javax.xml.bind.DatatypeConverter.printHexBinary(ID) + ", ans_type="
+				+ javax.xml.bind.DatatypeConverter.printHexBinary(ans_type) + ", ans_class="
+				+ javax.xml.bind.DatatypeConverter.printHexBinary(ans_class) + ", QR=" + QR + ", AA=" + AA
 				+ ", TC=" + TC + ", RD=" + RD + ", RA=" + RA + ", OPCode="
 				+ OPCode + ", RCode=" + RCode + ", QDCount=" + QDCount
 				+ ", ANCount=" + ANCount + ", NSCount=" + NSCount
 				+ ", ARCount=" + ARCount + ", ans_ttl=" + ans_ttl
 				+ ", ans_rdLength=" + ans_rdLength + ", ans_name=" + ans_name
+				+ ", IP_address=" + ip_address
 				+ "]";
 	}
 
@@ -155,5 +156,13 @@ public class ResponseResult {
 
 	public void setARCount(int aRCount) {
 		ARCount = aRCount;
+	}
+
+	public String getIp_address() {
+		return ip_address;
+	}
+
+	public void setIp_address(String ip_address) {
+		this.ip_address = ip_address;
 	}
 }
