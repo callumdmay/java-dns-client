@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.net.*;
-import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
@@ -24,50 +23,64 @@ public class DnsClient {
     }
 
     public void makeRequest() {
-        System.out.println("DnsClient sending request for " + name);
+        System.out.println("DnsClient sending pollRequest for " + name);
         System.out.println("Server: " + address);
         System.out.println("Request type: " + queryType);
-        //TODO: need to do retries, currently just does once.
+        pollRequest(1);
+    }
+
+    private void pollRequest(int retryNumber) {
+        if (retryNumber > maxRetries) {
+            System.out.println("Max retry number exceeded.");
+            return;
+        }
+
+        System.out.println("Attempt number: " + retryNumber);
         try {
-        	//TODO: I think a bunch of the below stuff shouldn't even be in the try catch
+            //TODO: I think a bunch of the below stuff shouldn't even be in the try catch
             DatagramSocket socket = new DatagramSocket();
             socket.setSoTimeout(timeout);
             InetAddress inetaddress = InetAddress.getByAddress(server);
             DnsRequest request = new DnsRequest(name, queryType);
-            
+
             byte[] requestBytes = request.getRequest();
             byte[] responseBytes = new byte[1024];
             DatagramPacket requestPacket = new DatagramPacket(requestBytes, requestBytes.length, inetaddress, port);
             DatagramPacket responsePacket = new DatagramPacket(responseBytes, responseBytes.length);
 
             long startTime = System.currentTimeMillis();
-            socket.send(requestPacket);           
+            socket.send(requestPacket);
             socket.receive(responsePacket);
             long endTime = System.currentTimeMillis();
             socket.close();
 
-            System.out.println("Response received after " + (endTime - startTime)/1000. + " seconds ([num-retries] retries)");
-            
+            System.out.println("Response received after " + (endTime - startTime)/1000. + " seconds");
+
             DnsResponse response = new DnsResponse(responsePacket.getData(), requestBytes.length);
             ResponseResult result = response.parseResponse();
             if (result.getANCount() > 0){
-            	 System.out.println("***Answer Section (" + result.getANCount() + " records)***");
-            	 String authString = result.isAA() ? "auth" : "nonauth";
-            	 System.out.println("IP\t" + result.getIp_address() + "\t" + result.getAns_ttl() + "\t" + authString);
-            	 
-            	 //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
-            }
-            
-            if (result.getARCount() > 0){
-            	System.out.println("***Additional Section ([num-additional] records)***");
-            	//TODO:
+                System.out.println("***Answer Section (" + result.getANCount() + " records)***");
+                String authString = result.isAA() ? "auth" : "nonauth";
+                System.out.println("IP\t" + result.getIp_address() + "\t" + result.getAns_ttl() + "\t" + authString);
+
+                //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
             }
 
-        } catch (SocketException | UnknownHostException e) {
-            e.printStackTrace();
+            if (result.getARCount() > 0){
+                System.out.println("***Additional Section ([num-additional] records)***");
+                //TODO:
+            }
+
+        } catch (SocketException e) {
+            System.out.println("Error creating socket.");
+        } catch (UnknownHostException e ) {
+            System.out.println("Error: Unknown host.");
+        } catch (SocketTimeoutException e) {
+            System.out.println("Socket Timeout. Reattempting request...");
+            pollRequest(++retryNumber);
         } catch (IOException e) {
-			e.printStackTrace();
-		}
+            e.printStackTrace();
+        }
     }
 
     private void parseInputArguments(String args[]) {
