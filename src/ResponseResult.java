@@ -1,6 +1,3 @@
-import java.util.Arrays;
-
-
 public class ResponseResult {
 	private byte[] ID, ans_type, ans_class;
 	private boolean QR, AA, TC, RD, RA;
@@ -10,9 +7,9 @@ public class ResponseResult {
 	
 	@Override
 	public String toString() {
-		return "ResponseResult [ID=" + javax.xml.bind.DatatypeConverter.printHexBinary(ID) + ", ans_type="
-				+ javax.xml.bind.DatatypeConverter.printHexBinary(ans_type) + ", ans_class="
-				+ javax.xml.bind.DatatypeConverter.printHexBinary(ans_class) + ", QR=" + QR + ", AA=" + AA
+		return "ResponseResult [ID=" + bytesToHex(ID) + ", ans_type="
+				+ bytesToHex(ans_type) + ", ans_class="
+				+ bytesToHex(ans_class) + ", QR=" + QR + ", AA=" + AA
 				+ ", TC=" + TC + ", RD=" + RD + ", RA=" + RA + ", OPCode="
 				+ OPCode + ", RCode=" + RCode + ", QDCount=" + QDCount
 				+ ", ANCount=" + ANCount + ", NSCount=" + NSCount
@@ -21,6 +18,14 @@ public class ResponseResult {
 				+ ", IP_address=" + ip_address
 				+ "]";
 	}
+
+	public static String bytesToHex(byte[] in) {
+        final StringBuilder builder = new StringBuilder();
+        for(byte b : in) {
+            builder.append(String.format("%02x", b));
+        }
+        return builder.toString();
+    }
 
 	public byte[] getAns_type() {
 		return ans_type;
