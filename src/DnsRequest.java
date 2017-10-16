@@ -68,11 +68,11 @@ public class DnsRequest {
 	}
 	
 	private char hexFromType(QueryType type){
-		if(type == QueryType.A){
+		if (type == QueryType.A) {
 			return '1';
-		}else if(type == QueryType.MX){
+		} else if (type == QueryType.MX) {
 			return '2';
-		}else {
+		} else {
 			return 'F';
 		}
 	}

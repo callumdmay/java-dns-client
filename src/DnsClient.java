@@ -37,7 +37,6 @@ public class DnsClient {
 
         System.out.println("Attempt number: " + retryNumber);
         try {
-            //TODO: I think a bunch of the below stuff shouldn't even be in the try catch
             DatagramSocket socket = new DatagramSocket();
             socket.setSoTimeout(timeout);
             InetAddress inetaddress = InetAddress.getByAddress(server);
@@ -60,9 +59,9 @@ public class DnsClient {
             response.outputResponse();
 
         } catch (SocketException e) {
-            System.out.println("Error creating socket.");
+            System.out.println("Error creating socket");
         } catch (UnknownHostException e ) {
-            System.out.println("Error: Unknown host.");
+            System.out.println("Error: Unknown host");
         } catch (SocketTimeoutException e) {
             System.out.println("Socket Timeout. Reattempting request...");
             pollRequest(++retryNumber);
