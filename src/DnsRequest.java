@@ -56,6 +56,7 @@ public class DnsRequest {
 				
 			}
 		}
+
 		question.put((byte) 0x00);
 
 		//go through QNameRows and fill the question byte array

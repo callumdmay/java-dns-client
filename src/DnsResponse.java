@@ -27,8 +27,6 @@ public class DnsResponse {
     	
     	//check if offset
     	if((response[countByte] & 0xC0) == (int) 0xC0){
-//    		byte[] test = { response[countByte] };
-//    		System.out.println(javax.xml.bind.DatatypeConverter.printHexBinary(test));
         	byte[] offset = { (byte) (response[countByte] & 0x3F), response[countByte + 1] };
         	ByteBuffer wrapped = ByteBuffer.wrap(offset);
     		//get offset and then get name starting at that point
@@ -86,6 +84,7 @@ public class DnsResponse {
     private void parseQuestion(){
     	//TODO
     }
+
     private void parseHeader(){
     	//ID
     	byte[] ID = new byte[2];
