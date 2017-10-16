@@ -32,10 +32,17 @@ public class DnsClient {
             DatagramSocket socket = new DatagramSocket();
             socket.setSoTimeout(timeout);
             InetAddress inetaddress = InetAddress.getByAddress(server);
-            DnsRequest request = new DnsRequest(address, queryType);
+            DnsRequest request = new DnsRequest(name, queryType);
             byte[] requestBytes = request.getRequest();
+//            for(int i = 0; i < requestBytes.length; i++){
+//            	System.out.print(requestBytes[i] + ",");
+//            }
+//            System.out.println();
+//            System.out.print("REQUEST: ");
+//            for(int i = 0; i < requestBytes.length; i++){
+//            	System.out.print((char) requestBytes[i] + ",");
+//            }
 //            int answerLength = MAX_DNS_PACKET_SIZE - requestBytes.length;
-//            DnsResponse response = new DnsResponse()
             
             DatagramPacket requestPacket = new DatagramPacket(requestBytes, requestBytes.length, inetaddress, 53);
             
@@ -46,8 +53,21 @@ public class DnsClient {
             socket.receive(responsePacket);
             System.out.println("\n\nReceived: " + responsePacket.getLength() + " bytes");
             
-            DnsResponse response = new DnsResponse(responsePacket.getData());
-            response.parseResponse();
+            
+//            String s = new String(responsePacket.getData());
+//            System.out.print("RESPONSE: ");
+//            for(int i = 0; i < responsePacket.getData().length; i++){
+//            	System.out.print(responsePacket.getData()[i] + ",");
+//            }
+//            System.out.println();
+//            System.out.print("RESPONSE: ");
+//            for(int i = 0; i < responsePacket.getData().length; i++){
+//            	System.out.print((char) responsePacket.getData()[i] + ",");
+//            }
+
+            DnsResponse response = new DnsResponse(responsePacket.getData(), requestBytes.length);
+            ResponseResult result = response.parseResponse();
+            System.out.println(result.toString());
             
         } catch (SocketException | UnknownHostException e) {
             e.printStackTrace();

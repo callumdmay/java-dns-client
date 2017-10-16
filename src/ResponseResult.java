@@ -1,10 +1,66 @@
+import java.util.Arrays;
+
 
 public class ResponseResult {
-	private byte[] ID;
+	private byte[] ID, ans_type, ans_class;
 	private boolean QR, AA, TC, RD, RA;
 	private byte OPCode;
-	private int RCode, QDCount, ANCount, NSCount, ARCount;
+	private int RCode, QDCount, ANCount, NSCount, ARCount, ans_ttl, ans_rdLength;
+	private String ans_name;
 	
+	@Override
+	public String toString() {
+		return "ResponseResult [ID=" + Arrays.toString(ID) + ", ans_type="
+				+ Arrays.toString(ans_type) + ", ans_class="
+				+ Arrays.toString(ans_class) + ", QR=" + QR + ", AA=" + AA
+				+ ", TC=" + TC + ", RD=" + RD + ", RA=" + RA + ", OPCode="
+				+ OPCode + ", RCode=" + RCode + ", QDCount=" + QDCount
+				+ ", ANCount=" + ANCount + ", NSCount=" + NSCount
+				+ ", ARCount=" + ARCount + ", ans_ttl=" + ans_ttl
+				+ ", ans_rdLength=" + ans_rdLength + ", ans_name=" + ans_name
+				+ "]";
+	}
+
+	public byte[] getAns_type() {
+		return ans_type;
+	}
+
+	public void setAns_type(byte[] ans_type) {
+		this.ans_type = ans_type;
+	}
+
+	public byte[] getAns_class() {
+		return ans_class;
+	}
+
+	public void setAns_class(byte[] ans_class) {
+		this.ans_class = ans_class;
+	}
+
+	public int getAns_ttl() {
+		return ans_ttl;
+	}
+
+	public void setAns_ttl(int ans_ttl) {
+		this.ans_ttl = ans_ttl;
+	}
+
+	public int getAns_rdLength() {
+		return ans_rdLength;
+	}
+
+	public void setAns_rdLength(int ans_rdLength) {
+		this.ans_rdLength = ans_rdLength;
+	}
+
+	public String getAns_name() {
+		return ans_name;
+	}
+
+	public void setAns_name(String ans_name) {
+		this.ans_name = ans_name;
+	}
+
 	public byte[] getID() {
 		return ID;
 	}
