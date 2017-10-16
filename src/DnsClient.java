@@ -31,7 +31,7 @@ public class DnsClient {
 
     private void pollRequest(int retryNumber) {
         if (retryNumber > maxRetries) {
-            System.out.println("Maximum number of retries " + maxRetries+ " exceeded");
+            System.out.println("ERROR\tMaximum number of retries " + maxRetries+ " exceeded");
             return;
         }
 
@@ -44,6 +44,7 @@ public class DnsClient {
 
             byte[] requestBytes = request.getRequest();
             byte[] responseBytes = new byte[1024];
+
             DatagramPacket requestPacket = new DatagramPacket(requestBytes, requestBytes.length, inetaddress, port);
             DatagramPacket responsePacket = new DatagramPacket(responseBytes, responseBytes.length);
 
@@ -59,14 +60,18 @@ public class DnsClient {
             response.outputResponse();
 
         } catch (SocketException e) {
-            System.out.println("Error creating socket");
+            System.out.println("ERROR\tCould not create socket");
         } catch (UnknownHostException e ) {
-            System.out.println("Error: Unknown host");
+            System.out.println("ERROR\tUnknown host");
         } catch (SocketTimeoutException e) {
-            System.out.println("Socket Timeout. Reattempting request...");
+            System.out.println("ERROR\tSocket Timeout");
+            System.out.println("Reattempting request...");
             pollRequest(++retryNumber);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (MissingDomainException e) {
+            //Has to be this exact phrase as per the assignment
+            System.out.println("NOTFOUND");
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 
@@ -100,7 +105,7 @@ public class DnsClient {
                         for (int i = 0; i < addressComponents.length; i++) {
                             int ipValue = Integer.parseInt(addressComponents[i]);
                             if (ipValue < 0 || ipValue > 255) {
-                                throw new NumberFormatException("Incorrect input syntax: IP Address numbers must be between 0 and 255, inclusive.");
+                                throw new NumberFormatException("ERROR\tIncorrect input syntax: IP Address numbers must be between 0 and 255, inclusive.");
                             }
                             server[i] = (byte) ipValue;
                         }

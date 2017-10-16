@@ -2,34 +2,56 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
-public class DnsResponse {
+public class DnsResponse{
 	private byte[] response;
 	private ResponseResult result;
 	private int requestSize;
 
-	public DnsResponse(byte[] response, int requestSize){
+	public DnsResponse(byte[] response, int requestSize) throws Exception {
 		this.response = response;
 		this.requestSize = requestSize;
     	result = new ResponseResult();
-        parseHeader();
-        parseQuestion();
-        parseAnswer();
+        this.parseHeader();
+        this.parseQuestion();
+        this.parseAnswer();
+        this.checkRCodeErrors();
     }
 
     public void outputResponse() {
-        if (result.getANCount() > 0){
-            System.out.println("***Answer Section (" + result.getANCount() + " records)***");
-            String authString = result.isAA() ? "auth" : "nonauth";
-            System.out.println("IP\t" + result.getIp_address() + "\t" + result.getAns_ttl() + "\t" + authString);
-
-            //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
+	    if (result.getANCount() <= 0) {
+            System.out.println("NOTFOUND");
+            return;
         }
+
+        System.out.println("***Answer Section (" + result.getANCount() + " records)***");
+        String authString = result.isAA() ? "auth" : "nonauth";
+        System.out.println("IP\t" + result.getIp_address() + "\t" + result.getAns_ttl() + "\t" + authString);
+
+        //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
 
         if (result.getARCount() > 0){
             System.out.println("***Additional Section ([num-additional] records)***");
             //TODO:
         }
 	}
+
+	private void checkRCodeErrors() throws Exception {
+	    switch( result.getRCode()) {
+            case 0:
+                //No error
+                break;
+            case 1:
+                throw new Exception("Format error: the name server was unable to interpret the query");
+            case 2:
+                throw new Exception("Server failure: the name server was unable to process this query due to a problem with the name server");
+            case 3:
+                throw new MissingDomainException();
+            case 4:
+                throw new Exception("Not implemented: the name server does not support the requested kind of query");
+            case 5:
+                throw new Exception("Refused: the name server refuses to perform the requested operation for policy reasons");
+        }
+    }
 
     private void parseAnswer(){
     	String domain = "";
@@ -160,6 +182,7 @@ public class DnsResponse {
     	}
     	return domain;
     }
+
     private int getBit(byte b, int position) {
     	return (b >> position) & 1;
     }

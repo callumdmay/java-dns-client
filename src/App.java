@@ -3,7 +3,7 @@ public class App {
         try {
             DnsClient client = new DnsClient(args);
             client.makeRequest();
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             System.out.println(e.getMessage());
         }
     }
