@@ -59,15 +59,16 @@ public class DnsRequest {
 
 		question.put((byte) 0x00);
 
-		//go through QNameRows and fill the question byte array
-		question.put(hexStringToByteArray("000" + hexFromType(type)));
+		//Add Query Type
+		question.put(hexStringToByteArray("000" + hexValueFromQueryType(type)));
 		question.put((byte) 0x00);
-		question.put((byte) 0x01);
+		//Add Query Class - always  0x0001 for internet addresses
+		question.put((byte) 0x0001);
 
 		return question.array();
 	}
 	
-	private char hexFromType(QueryType type){
+	private char hexValueFromQueryType(QueryType type){
 		if (type == QueryType.A) {
 			return '1';
 		} else if (type == QueryType.MX) {
