@@ -36,7 +36,7 @@ public class DnsResponse{
 
         if (this.ARCount > 0) {
             System.out.println("***Additional Section ([num-additional] records)***");
-            //TODO:
+            //TODO additional sections
         }
     }
 
@@ -215,22 +215,21 @@ public class DnsResponse{
     }
 
     private void parseNSTypeRDATA(int rdLength, int countByte) {
-
+        //TODO add support for parsing this type of RDATA
     }
 
     private void parseMXTypeRDATA(int rdLength, int countByte) {
-
+        //TODO add support for parsing this type of RDATA
     }
 
     private void parseCNAMETypeRDATA(int rdLength, int countByte) {
-
+        //TODO add support for parsing this type of RDATA
     }
 
     private void validateQueryTypeIsResponse(){
         if (!this.QR) {
             throw new RuntimeException("ERROR\tInvalid response from server: Message is not a response");
         }
-        
     }
 
     private void validateResponseQuestionType() {
