@@ -4,38 +4,43 @@ import java.nio.ByteBuffer;
 
 public class DnsResponse{
 	private byte[] response;
-	private ResponseResult result;
 	private int requestSize;
+    private byte[] ID, ans_type, ans_class;
+    private boolean QR, AA, TC, RD, RA;
+    private byte OPCode;
+    private int RCode, QDCount, ANCount, NSCount, ARCount, ans_ttl, ans_rdLength;
+    private String ans_name, ip_address;
 
 	public DnsResponse(byte[] response, int requestSize) throws Exception {
 		this.response = response;
 		this.requestSize = requestSize;
-    	result = new ResponseResult();
         this.parseHeader();
         this.parseAnswer();
         this.checkRCodeErrors();
     }
 
     public void outputResponse() {
-	    if (result.getANCount() <= 0) {
+        if (this.ANCount <= 0) {
             System.out.println("NOTFOUND");
             return;
         }
 
-        System.out.println("***Answer Section (" + result.getANCount() + " records)***");
-        String authString = result.isAA() ? "auth" : "nonauth";
-        System.out.println("IP\t" + result.getIp_address() + "\t" + result.getAns_ttl() + "\t" + authString);
+        System.out.println("***Answer Section (" + this.ANCount + " records)***");
+        String authString = this.AA ? "auth" : "nonauth";
+        System.out.println("IP\t" + this.ip_address + "\t" + this.ans_ttl + "\t" + authString);
 
         //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
 
-        if (result.getARCount() > 0){
+        if (this.ARCount > 0) {
             System.out.println("***Additional Section ([num-additional] records)***");
             //TODO:
         }
+    }
+	private void getRecords() {
 	}
 
 	private void checkRCodeErrors() throws Exception {
-	    switch( result.getRCode()) {
+	    switch( this.RCode) {
             case 0:
                 //No error
                 break;
@@ -69,34 +74,34 @@ public class DnsResponse{
     	}
     	
     	//Name
-    	result.setAns_name(domain);
+    	this.ans_name = domain;
     	
     	
     	//TYPE
     	byte[] ans_type = new byte[2];
     	ans_type[0] = response[countByte];
     	ans_type[1] = response[countByte + 1];
-    	result.setAns_type(ans_type);
+    	this.ans_type = ans_type;
     	
     	countByte += 2;
     	//CLASS
     	byte[] ans_class = new byte[2];
     	ans_class[0] = response[countByte];
     	ans_class[1] = response[countByte + 1];
-    	result.setAns_class(ans_class);
+    	this.ans_class = ans_class;
     	
     	countByte +=2;
     	//TTL
     	byte[] TTL = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
     	ByteBuffer wrapped = ByteBuffer.wrap(TTL);
-    	result.setAns_ttl(wrapped.getShort());
+    	this.ans_ttl = wrapped.getShort();
     	
     	countByte +=4;
     	//RDLength
     	byte[] RDLength = { response[countByte], response[countByte + 1] };
     	wrapped = ByteBuffer.wrap(RDLength);
     	int rdLength = wrapped.getShort();
-    	result.setAns_rdLength(rdLength);
+    	this.ans_rdLength = rdLength;
     	
     	countByte +=2;
     	
@@ -104,7 +109,7 @@ public class DnsResponse{
     		byte[] IPAddress = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
     		try {
 				InetAddress inetaddress = InetAddress.getByAddress(IPAddress);
-				result.setIp_address(inetaddress.toString().substring(1));
+				this.ip_address = inetaddress.toString().substring(1);
 			} catch (UnknownHostException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -117,47 +122,45 @@ public class DnsResponse{
     	byte[] ID = new byte[2];
     	ID[0] = response[0];
     	ID[1] = response[1];
-    	result.setID(ID);
+    	this.ID = ID;
     	
     	//QR
-    	result.setQR(getBit(response[2], 7) == 1);
-    	
-    	//OPCODE TODO
+    	this.QR = getBit(response[2], 7) == 1;
     	
     	//AA
-    	result.setAA(getBit(response[2], 2) == 1);
+    	this.AA = getBit(response[2], 2) == 1;
     	
     	//TC
-    	result.setTC(getBit(response[2], 1) == 1);
+    	this.TC = getBit(response[2], 1) == 1;
     	
     	//RD
-    	result.setRD(getBit(response[2], 0) == 1);
+    	this.RD = getBit(response[2], 0) == 1;
     	
     	//RA
-    	result.setRA(getBit(response[3], 7) == 1);
+    	this.RA = getBit(response[3], 7) == 1;
     	
     	//RCODE
-    	result.setRCode(response[3] & 0x0F);
+    	this.RCode = response[3] & 0x0F;
     	
     	//QDCount
     	byte[] QDCount = { response[4], response[5] };
     	ByteBuffer wrapped = ByteBuffer.wrap(QDCount);
-    	result.setQDCount(wrapped.getShort());
+    	this.QDCount = wrapped.getShort();
     	
     	//ANCount
     	byte[] ANCount = { response[6], response[7] };
     	wrapped = ByteBuffer.wrap(ANCount);
-    	result.setANCount(wrapped.getShort());
+    	this.ANCount = wrapped.getShort();
     	
     	//NSCount
     	byte[] NSCount = { response[8], response[9] };
     	wrapped = ByteBuffer.wrap(NSCount);
-    	result.setNSCount(wrapped.getShort());
+    	this.NSCount = wrapped.getShort();
     	
     	//ARCount
     	byte[] ARCount = { response[10], response[11] };
     	wrapped = ByteBuffer.wrap(ARCount);
-    	result.setARCount(wrapped.getShort());
+    	this.ARCount = wrapped.getShort();
     }
 
     private String getDomainFromIndex(int index){
