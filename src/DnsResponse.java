@@ -12,7 +12,6 @@ public class DnsResponse{
 		this.requestSize = requestSize;
     	result = new ResponseResult();
         this.parseHeader();
-        this.parseQuestion();
         this.parseAnswer();
         this.checkRCodeErrors();
     }
@@ -111,10 +110,6 @@ public class DnsResponse{
 				e.printStackTrace();
 			}
     	}
-    }
-
-    private void parseQuestion(){
-    	//TODO
     }
 
     private void parseHeader(){

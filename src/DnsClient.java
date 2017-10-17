@@ -16,9 +16,13 @@ public class DnsClient {
     private int port = 53;
 
     public DnsClient(String args[]) {
-        this.parseInputArguments(args);
+        try {
+            this.parseInputArguments(args);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("ERROR\tIncorrect input syntax: Please check arguments and try again");
+        }
         if (server == null || name == null) {
-            throw new IllegalArgumentException("Incorrect input syntax: Server IP and domain name must be provided.");
+            throw new IllegalArgumentException("ERROR\tIncorrect input syntax: Server IP and domain name must be provided.");
         }
     }
 
