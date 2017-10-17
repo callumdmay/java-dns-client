@@ -59,7 +59,7 @@ public class DnsClient {
 
             System.out.println("Response received after " + (endTime - startTime)/1000. + " seconds " + "(" + (retryNumber - 1) + " retries)");
 
-            DnsResponse response = new DnsResponse(responsePacket.getData(), requestBytes.length);
+            DnsResponse response = new DnsResponse(responsePacket.getData(), requestBytes.length, queryType);
             response.outputResponse();
 
         } catch (SocketException e) {

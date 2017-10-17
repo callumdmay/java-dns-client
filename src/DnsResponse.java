@@ -7,16 +7,26 @@ public class DnsResponse{
 	private int requestSize;
     private byte[] ID, ans_type, ans_class;
     private boolean QR, AA, TC, RD, RA;
-    private byte OPCode;
     private int RCode, QDCount, ANCount, NSCount, ARCount, ans_ttl, ans_rdLength;
     private String ans_name, ip_address;
+    private QueryType queryType;
 
-	public DnsResponse(byte[] response, int requestSize) throws Exception {
+	public DnsResponse(byte[] response, int requestSize, QueryType queryType) throws Exception {
 		this.response = response;
 		this.requestSize = requestSize;
+		this.queryType = queryType;
+
         this.parseHeader();
         this.parseAnswer();
-        this.checkRCodeErrors();
+        this.validateResponse();
+    }
+
+    private void validateResponse(){
+        if (!this.QR) {
+            throw new RuntimeException("ERROR\tInvalid response from server: Message is not a response");
+        }
+        this.checkRCodeForErrors();
+        this.validateResponseQuestionType();
     }
 
     public void outputResponse() {
@@ -36,31 +46,92 @@ public class DnsResponse{
             //TODO:
         }
     }
+
 	private void getRecords() {
 	}
 
-	private void checkRCodeErrors() throws Exception {
+	private void checkRCodeForErrors() {
 	    switch( this.RCode) {
             case 0:
                 //No error
                 break;
             case 1:
-                throw new Exception("Format error: the name server was unable to interpret the query");
+                throw new RuntimeException("Format error: the name server was unable to interpret the query");
             case 2:
-                throw new Exception("Server failure: the name server was unable to process this query due to a problem with the name server");
+                throw new RuntimeException("Server failure: the name server was unable to process this query due to a problem with the name server");
             case 3:
                 throw new MissingDomainException();
             case 4:
-                throw new Exception("Not implemented: the name server does not support the requested kind of query");
+                throw new RuntimeException("Not implemented: the name server does not support the requested kind of query");
             case 5:
-                throw new Exception("Refused: the name server refuses to perform the requested operation for policy reasons");
+                throw new RuntimeException("Refused: the name server refuses to perform the requested operation for policy reasons");
+        }
+    }
+
+    private void parseHeader(){
+        //ID
+        byte[] ID = new byte[2];
+        ID[0] = response[0];
+        ID[1] = response[1];
+        this.ID = ID;
+
+        //QR
+        this.QR = getBit(response[2], 7) == 1;
+
+        //AA
+        this.AA = getBit(response[2], 2) == 1;
+
+        //TC
+        this.TC = getBit(response[2], 1) == 1;
+
+        //RD
+        this.RD = getBit(response[2], 0) == 1;
+
+        //RA
+        this.RA = getBit(response[3], 7) == 1;
+
+        //RCODE
+        this.RCode = response[3] & 0x0F;
+
+        //QDCount
+        byte[] QDCount = { response[4], response[5] };
+        ByteBuffer wrapped = ByteBuffer.wrap(QDCount);
+        this.QDCount = wrapped.getShort();
+
+        //ANCount
+        byte[] ANCount = { response[6], response[7] };
+        wrapped = ByteBuffer.wrap(ANCount);
+        this.ANCount = wrapped.getShort();
+
+        //NSCount
+        byte[] NSCount = { response[8], response[9] };
+        wrapped = ByteBuffer.wrap(NSCount);
+        this.NSCount = wrapped.getShort();
+
+        //ARCount
+        byte[] ARCount = { response[10], response[11] };
+        wrapped = ByteBuffer.wrap(ARCount);
+        this.ARCount = wrapped.getShort();
+    }
+
+    private void validateResponseQuestionType() {
+        //Question starts at byte 13 (indexed at 11)
+        int index = 12;
+
+        while (this.response[index] != 0) {
+            index++;
+        }
+        byte[] qType = {this.response[index + 1], this.response[index + 2]};
+
+        if (this.getQTYPEFromByteArray(qType) != this.queryType) {
+            throw new RuntimeException("ERROR\tResponse query type does not match request query type");
         }
     }
 
     private void parseAnswer(){
     	String domain = "";
     	int countByte = requestSize; //start byte
-    	
+
     	//check if offset
     	if((response[countByte] & 0xC0) == (int) 0xC0){
         	byte[] offset = { (byte) (response[countByte] & 0x3F), response[countByte + 1] };
@@ -72,39 +143,39 @@ public class DnsResponse{
     		domain = getDomainFromIndex(countByte);
     		countByte += domain.length();
     	}
-    	
+
     	//Name
     	this.ans_name = domain;
-    	
-    	
+
+
     	//TYPE
     	byte[] ans_type = new byte[2];
     	ans_type[0] = response[countByte];
     	ans_type[1] = response[countByte + 1];
     	this.ans_type = ans_type;
-    	
+
     	countByte += 2;
     	//CLASS
     	byte[] ans_class = new byte[2];
     	ans_class[0] = response[countByte];
     	ans_class[1] = response[countByte + 1];
     	this.ans_class = ans_class;
-    	
+
     	countByte +=2;
     	//TTL
     	byte[] TTL = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
     	ByteBuffer wrapped = ByteBuffer.wrap(TTL);
     	this.ans_ttl = wrapped.getShort();
-    	
+
     	countByte +=4;
     	//RDLength
     	byte[] RDLength = { response[countByte], response[countByte + 1] };
     	wrapped = ByteBuffer.wrap(RDLength);
     	int rdLength = wrapped.getShort();
     	this.ans_rdLength = rdLength;
-    	
+
     	countByte +=2;
-    	
+
     	if (rdLength == 4){
     		byte[] IPAddress = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
     		try {
@@ -115,52 +186,6 @@ public class DnsResponse{
 				e.printStackTrace();
 			}
     	}
-    }
-
-    private void parseHeader(){
-    	//ID
-    	byte[] ID = new byte[2];
-    	ID[0] = response[0];
-    	ID[1] = response[1];
-    	this.ID = ID;
-    	
-    	//QR
-    	this.QR = getBit(response[2], 7) == 1;
-    	
-    	//AA
-    	this.AA = getBit(response[2], 2) == 1;
-    	
-    	//TC
-    	this.TC = getBit(response[2], 1) == 1;
-    	
-    	//RD
-    	this.RD = getBit(response[2], 0) == 1;
-    	
-    	//RA
-    	this.RA = getBit(response[3], 7) == 1;
-    	
-    	//RCODE
-    	this.RCode = response[3] & 0x0F;
-    	
-    	//QDCount
-    	byte[] QDCount = { response[4], response[5] };
-    	ByteBuffer wrapped = ByteBuffer.wrap(QDCount);
-    	this.QDCount = wrapped.getShort();
-    	
-    	//ANCount
-    	byte[] ANCount = { response[6], response[7] };
-    	wrapped = ByteBuffer.wrap(ANCount);
-    	this.ANCount = wrapped.getShort();
-    	
-    	//NSCount
-    	byte[] NSCount = { response[8], response[9] };
-    	wrapped = ByteBuffer.wrap(NSCount);
-    	this.NSCount = wrapped.getShort();
-    	
-    	//ARCount
-    	byte[] ARCount = { response[10], response[11] };
-    	wrapped = ByteBuffer.wrap(ARCount);
-    	this.ARCount = wrapped.getShort();
     }
 
     private String getDomainFromIndex(int index){
@@ -183,5 +208,21 @@ public class DnsResponse{
 
     private int getBit(byte b, int position) {
     	return (b >> position) & 1;
+    }
+
+    private QueryType getQTYPEFromByteArray(byte[] qType) {
+        if (qType[0] == 0) {
+            if (qType[1] == 1) {
+                return QueryType.A;
+            } else if (qType[1] == 2) {
+                return QueryType.NS;
+            } else if (qType[1] == 15) {
+                return  QueryType.MX;
+            } else {
+                throw new RuntimeException("ERROR\tUnrecognized query type in response");
+            }
+        } else {
+            throw new RuntimeException("ERROR\tUnrecognized query type in response");
+        }
     }
 }

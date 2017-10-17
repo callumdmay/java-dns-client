@@ -1,4 +1,4 @@
-public class MissingDomainException extends Exception {
+public class MissingDomainException extends RuntimeException{
     public MissingDomainException() {
         super();
     }

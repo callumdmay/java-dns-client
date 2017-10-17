@@ -71,7 +71,7 @@ public class DnsRequest {
 	private char hexValueFromQueryType(QueryType type){
 		if (type == QueryType.A) {
 			return '1';
-		} else if (type == QueryType.MX) {
+		} else if (type == QueryType.NS) {
 			return '2';
 		} else {
 			return 'F';
