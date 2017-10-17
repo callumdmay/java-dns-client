@@ -27,7 +27,7 @@ public class DnsClient {
     }
 
     public void makeRequest() {
-        System.out.println("DnsClient sending pollRequest for " + name);
+        System.out.println("DnsClient sending request for " + name);
         System.out.println("Server: " + address);
         System.out.println("Request type: " + queryType);
         pollRequest(1);
@@ -39,7 +39,6 @@ public class DnsClient {
             return;
         }
 
-        System.out.println("Attempt number: " + retryNumber);
         try {
             DatagramSocket socket = new DatagramSocket();
             socket.setSoTimeout(timeout);
@@ -58,7 +57,7 @@ public class DnsClient {
             long endTime = System.currentTimeMillis();
             socket.close();
 
-            System.out.println("Response received after " + (endTime - startTime)/1000. + " seconds");
+            System.out.println("Response received after " + (endTime - startTime)/1000. + " seconds " + "(" + (retryNumber - 1) + " retries)");
 
             DnsResponse response = new DnsResponse(responsePacket.getData(), requestBytes.length);
             response.outputResponse();
