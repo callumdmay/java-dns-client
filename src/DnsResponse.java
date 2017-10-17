@@ -8,7 +8,8 @@ public class DnsResponse{
     private byte[] ID, ans_type, ans_class;
     private boolean QR, AA, TC, RD, RA;
     private int RCode, QDCount, ANCount, NSCount, ARCount, ans_ttl, ans_rdLength;
-    private String ans_name, ip_address;
+    private String ans_name;
+    private String[] ipAddressRecords, nameServerRecords, CNAMERecords;
     private QueryType queryType;
 
 	public DnsResponse(byte[] response, int requestSize, QueryType queryType) throws Exception {
@@ -16,17 +17,11 @@ public class DnsResponse{
 		this.requestSize = requestSize;
 		this.queryType = queryType;
 
+        this.validateResponseQuestionType();
         this.parseHeader();
         this.parseAnswer();
-        this.validateResponse();
-    }
-
-    private void validateResponse(){
-        if (!this.QR) {
-            throw new RuntimeException("ERROR\tInvalid response from server: Message is not a response");
-        }
         this.checkRCodeForErrors();
-        this.validateResponseQuestionType();
+        this.validateQueryTypeIsResponse();
     }
 
     public void outputResponse() {
@@ -36,10 +31,8 @@ public class DnsResponse{
         }
 
         System.out.println("***Answer Section (" + this.ANCount + " records)***");
-        String authString = this.AA ? "auth" : "nonauth";
-        System.out.println("IP\t" + this.ip_address + "\t" + this.ans_ttl + "\t" + authString);
 
-        //TODO: Right now this is hard-coded for IP (A-mode). This should work for all modes
+        this.outputQueryRecords();
 
         if (this.ARCount > 0) {
             System.out.println("***Additional Section ([num-additional] records)***");
@@ -47,8 +40,34 @@ public class DnsResponse{
         }
     }
 
-	private void getRecords() {
+	private void outputQueryRecords() {
+        switch(this.queryType) {
+            case A:
+                this.outputATypeRecords();
+                break;
+            case NS:
+                this.outputNSTypeRecords();
+                break;
+            case MX:
+                this.outputMXTypeRecords();
+                break;
+        }
 	}
+
+	private void outputATypeRecords() {
+        String authString = this.AA ? "auth" : "nonauth";
+        for (String ipAddress : ipAddressRecords) {
+            System.out.println("IP\t" + ipAddress + "\t" + this.ans_ttl + "\t" + authString);
+        }
+    }
+
+    private void outputNSTypeRecords() {
+
+    }
+
+    private void outputMXTypeRecords() {
+
+    }
 
 	private void checkRCodeForErrors() {
 	    switch( this.RCode) {
@@ -114,6 +133,106 @@ public class DnsResponse{
         this.ARCount = wrapped.getShort();
     }
 
+    private void parseAnswer(){
+        String domain = "";
+        int countByte = requestSize; //start byte
+
+        //check if offset
+        if ((response[countByte] & 0xC0) == (int) 0xC0) {
+            byte[] offset = { (byte) (response[countByte] & 0x3F), response[countByte + 1] };
+            ByteBuffer wrapped = ByteBuffer.wrap(offset);
+            //get offset and then get name starting at that point
+            domain = getDomainFromIndex(wrapped.getShort());
+            countByte += 2;
+        } else {
+            domain = getDomainFromIndex(countByte);
+            countByte += domain.length();
+        }
+
+        //Name
+        this.ans_name = domain;
+
+        //TYPE
+        byte[] ans_type = new byte[2];
+        ans_type[0] = response[countByte];
+        ans_type[1] = response[countByte + 1];
+        this.ans_type = ans_type;
+
+        countByte += 2;
+        //CLASS
+        byte[] ans_class = new byte[2];
+        ans_class[0] = response[countByte];
+        ans_class[1] = response[countByte + 1];
+        if (ans_class[0] != 0 && ans_class[1] != 1) {
+            throw new RuntimeException(("ERROR\tThe class field in the response answer is not 1"));
+        }
+        this.ans_class = ans_class;
+
+
+        countByte +=2;
+        //TTL
+        byte[] TTL = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
+        ByteBuffer wrapped = ByteBuffer.wrap(TTL);
+        this.ans_ttl = wrapped.getShort();
+
+        countByte +=4;
+        //RDLength
+        byte[] RDLength = { response[countByte], response[countByte + 1] };
+        wrapped = ByteBuffer.wrap(RDLength);
+        int rdLength = wrapped.getShort();
+        this.ans_rdLength = rdLength;
+
+        countByte +=2;
+        switch (this.queryType) {
+            case A:
+                this.parseATypeRDATA(rdLength, countByte);
+                break;
+            case NS:
+                this.parseNSTypeRDATA(rdLength, countByte);
+                break;
+            case MX:
+                this.parseMXTypeRDATA(rdLength, countByte);
+                break;
+            case CNAME:
+                this.parseCNAMETypeRDATA(rdLength, countByte);
+                break;
+        }
+    }
+
+    private void parseATypeRDATA(int rdLength, int countByte) {
+        String[] addresses = new String[rdLength/4];
+        for (int i = 0; i < rdLength/4; i++) {
+            byte[] byteAddress= { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
+            try {
+                InetAddress inetaddress = InetAddress.getByAddress(byteAddress);
+                addresses[i] = inetaddress.toString().substring(1);
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+            countByte += 4;
+        }
+        this.ipAddressRecords = addresses;
+    }
+
+    private void parseNSTypeRDATA(int rdLength, int countByte) {
+
+    }
+
+    private void parseMXTypeRDATA(int rdLength, int countByte) {
+
+    }
+
+    private void parseCNAMETypeRDATA(int rdLength, int countByte) {
+
+    }
+
+    private void validateQueryTypeIsResponse(){
+        if (!this.QR) {
+            throw new RuntimeException("ERROR\tInvalid response from server: Message is not a response");
+        }
+        
+    }
+
     private void validateResponseQuestionType() {
         //Question starts at byte 13 (indexed at 11)
         int index = 12;
@@ -126,66 +245,6 @@ public class DnsResponse{
         if (this.getQTYPEFromByteArray(qType) != this.queryType) {
             throw new RuntimeException("ERROR\tResponse query type does not match request query type");
         }
-    }
-
-    private void parseAnswer(){
-    	String domain = "";
-    	int countByte = requestSize; //start byte
-
-    	//check if offset
-    	if((response[countByte] & 0xC0) == (int) 0xC0){
-        	byte[] offset = { (byte) (response[countByte] & 0x3F), response[countByte + 1] };
-        	ByteBuffer wrapped = ByteBuffer.wrap(offset);
-    		//get offset and then get name starting at that point
-    		domain = getDomainFromIndex(wrapped.getShort());
-    		countByte += 2;
-    	}else{
-    		domain = getDomainFromIndex(countByte);
-    		countByte += domain.length();
-    	}
-
-    	//Name
-    	this.ans_name = domain;
-
-
-    	//TYPE
-    	byte[] ans_type = new byte[2];
-    	ans_type[0] = response[countByte];
-    	ans_type[1] = response[countByte + 1];
-    	this.ans_type = ans_type;
-
-    	countByte += 2;
-    	//CLASS
-    	byte[] ans_class = new byte[2];
-    	ans_class[0] = response[countByte];
-    	ans_class[1] = response[countByte + 1];
-    	this.ans_class = ans_class;
-
-    	countByte +=2;
-    	//TTL
-    	byte[] TTL = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
-    	ByteBuffer wrapped = ByteBuffer.wrap(TTL);
-    	this.ans_ttl = wrapped.getShort();
-
-    	countByte +=4;
-    	//RDLength
-    	byte[] RDLength = { response[countByte], response[countByte + 1] };
-    	wrapped = ByteBuffer.wrap(RDLength);
-    	int rdLength = wrapped.getShort();
-    	this.ans_rdLength = rdLength;
-
-    	countByte +=2;
-
-    	if (rdLength == 4){
-    		byte[] IPAddress = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
-    		try {
-				InetAddress inetaddress = InetAddress.getByAddress(IPAddress);
-				this.ip_address = inetaddress.toString().substring(1);
-			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-    	}
     }
 
     private String getDomainFromIndex(int index){
