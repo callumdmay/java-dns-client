@@ -1,16 +1,17 @@
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 public class DnsResponse{
 	private byte[] response;
 	private int requestSize;
-    private byte[] ID, ans_type, ans_class;
+    private byte[] ID;
     private boolean QR, AA, TC, RD, RA;
-    private int RCode, QDCount, ANCount, NSCount, ARCount, ans_ttl, ans_rdLength;
-    private String ans_name;
-    private String[] ipAddressRecords, nameServerRecords, CNAMERecords;
+    private int RCode, QDCount, ANCount, NSCount, ARCount;
+    private DNSRecord[] records;
     private QueryType queryType;
+    //TODO: MX, NS, Parse multiple answers
 
 	public DnsResponse(byte[] response, int requestSize, QueryType queryType) throws Exception {
 		this.response = response;
@@ -19,7 +20,15 @@ public class DnsResponse{
 
         this.validateResponseQuestionType();
         this.parseHeader();
-        this.parseAnswer();
+        
+        records = new DNSRecord[ANCount];
+        int offSet = requestSize;
+        for(int i = 0; i < ANCount; i ++){
+        	records[i] = this.parseAnswer(offSet);
+        	offSet += records[i].getByteLength();
+        }
+
+        
         this.checkRCodeForErrors();
         this.validateQueryTypeIsResponse();
     }
@@ -32,7 +41,9 @@ public class DnsResponse{
 
         System.out.println("***Answer Section (" + this.ANCount + " records)***");
 
-        this.outputQueryRecords();
+        for (DNSRecord record : records){
+        	record.outputRecord();	
+        }
 
         if (this.ARCount > 0) {
             System.out.println("***Additional Section ([num-additional] records)***");
@@ -40,35 +51,7 @@ public class DnsResponse{
         }
     }
 
-	private void outputQueryRecords() {
-        switch(this.queryType) {
-            case A:
-                this.outputATypeRecords();
-                break;
-            case NS:
-                this.outputNSTypeRecords();
-                break;
-            case MX:
-                this.outputMXTypeRecords();
-                break;
-        }
-	}
-
-	private void outputATypeRecords() {
-        String authString = this.AA ? "auth" : "nonauth";
-        for (String ipAddress : ipAddressRecords) {
-            System.out.println("IP\t" + ipAddress + "\t" + this.ans_ttl + "\t" + authString);
-        }
-    }
-
-    private void outputNSTypeRecords() {
-
-    }
-
-    private void outputMXTypeRecords() {
-
-    }
-
+	
 	private void checkRCodeForErrors() {
 	    switch( this.RCode) {
             case 0:
@@ -133,30 +116,25 @@ public class DnsResponse{
         this.ARCount = wrapped.getShort();
     }
 
-    private void parseAnswer(){
+    private DNSRecord parseAnswer(int index){
+    	DNSRecord result = new DNSRecord(this.AA);
+    	
         String domain = "";
-        int countByte = requestSize; //start byte
+        int countByte = index;
 
-        //check if offset
-        if ((response[countByte] & 0xC0) == (int) 0xC0) {
-            byte[] offset = { (byte) (response[countByte] & 0x3F), response[countByte + 1] };
-            ByteBuffer wrapped = ByteBuffer.wrap(offset);
-            //get offset and then get name starting at that point
-            domain = getDomainFromIndex(wrapped.getShort());
-            countByte += 2;
-        } else {
-            domain = getDomainFromIndex(countByte);
-            countByte += domain.length();
-        }
-
+        rDataEntry domainResult = getDomainFromIndex(countByte);
+        countByte += domainResult.getBytes();
+        domain = domainResult.getDomain();
+        
         //Name
-        this.ans_name = domain;
+        result.setAns_name(domain);
 
         //TYPE
         byte[] ans_type = new byte[2];
         ans_type[0] = response[countByte];
         ans_type[1] = response[countByte + 1];
-        this.ans_type = ans_type;
+        
+        result.setAns_type(getQTYPEFromByteArray(ans_type));
 
         countByte += 2;
         //CLASS
@@ -166,60 +144,63 @@ public class DnsResponse{
         if (ans_class[0] != 0 && ans_class[1] != 1) {
             throw new RuntimeException(("ERROR\tThe class field in the response answer is not 1"));
         }
-        this.ans_class = ans_class;
-
+        result.setAns_class(ans_class);
 
         countByte +=2;
         //TTL
         byte[] TTL = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
         ByteBuffer wrapped = ByteBuffer.wrap(TTL);
-        this.ans_ttl = wrapped.getShort();
+        result.setAns_ttl(wrapped.getInt());
 
         countByte +=4;
         //RDLength
         byte[] RDLength = { response[countByte], response[countByte + 1] };
         wrapped = ByteBuffer.wrap(RDLength);
         int rdLength = wrapped.getShort();
-        this.ans_rdLength = rdLength;
+        result.setAns_rdLength(rdLength);
 
         countByte +=2;
-        switch (this.queryType) {
+        switch (result.getAns_type()) {
             case A:
-                this.parseATypeRDATA(rdLength, countByte);
+                result.setAns_domain(parseATypeRDATA(rdLength, countByte));
                 break;
             case NS:
-                this.parseNSTypeRDATA(rdLength, countByte);
+                result.setAns_domain(parseNSTypeRDATA(rdLength, countByte));
                 break;
             case MX:
-                this.parseMXTypeRDATA(rdLength, countByte);
+                result.setAns_domain(parseMXTypeRDATA(rdLength, countByte));
                 break;
             case CNAME:
                 this.parseCNAMETypeRDATA(rdLength, countByte);
                 break;
         }
+        result.setByteLength(countByte + rdLength - index);
+        return result;
     }
 
-    private void parseATypeRDATA(int rdLength, int countByte) {
-        String[] addresses = new String[rdLength/4];
-        for (int i = 0; i < rdLength/4; i++) {
-            byte[] byteAddress= { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
-            try {
-                InetAddress inetaddress = InetAddress.getByAddress(byteAddress);
-                addresses[i] = inetaddress.toString().substring(1);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            }
-            countByte += 4;
+    private String parseATypeRDATA(int rdLength, int countByte) {
+        String address = "";
+        byte[] byteAddress= { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
+        try {
+            InetAddress inetaddress = InetAddress.getByAddress(byteAddress);
+            address = inetaddress.toString().substring(1);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
         }
-        this.ipAddressRecords = addresses;
+        return address;
+        
     }
 
-    private void parseNSTypeRDATA(int rdLength, int countByte) {
-        //TODO add support for parsing this type of RDATA
+    private String parseNSTypeRDATA(int rdLength, int countByte) {
+		rDataEntry result = getDomainFromIndex(countByte);
+		String nameServer = result.getDomain();
+    	
+    	return nameServer;
     }
 
-    private void parseMXTypeRDATA(int rdLength, int countByte) {
+    private String parseMXTypeRDATA(int rdLength, int countByte) {
         //TODO add support for parsing this type of RDATA
+    	return null;
     }
 
     private void parseCNAMETypeRDATA(int rdLength, int countByte) {
@@ -246,22 +227,43 @@ public class DnsResponse{
         }
     }
 
-    private String getDomainFromIndex(int index){
+    private rDataEntry getDomainFromIndex(int index){
+    	rDataEntry result = new rDataEntry();
     	int wordSize = response[index];
     	String domain = "";
-
-    	while(wordSize > 0){
-    		for(int i =0; i < wordSize; i++){
-    			domain += (char) response[index + i + 1];
-    		}
-    		index += wordSize + 1;
-    		wordSize = response[index];
-    			
-    		if (wordSize != 0){
-    			domain += ".";	
-    		}
+    	boolean start = true;
+    	int count = 0;
+    	while(wordSize != 0){
+			if (!start){
+				domain += ".";
+			}
+	    	if ((wordSize & 0xC0) == (int) 0xC0) {
+	    		byte[] offset = { (byte) (response[index] & 0x3F), response[index + 1] };
+	            ByteBuffer wrapped = ByteBuffer.wrap(offset);
+	            domain += getDomainFromIndex(wrapped.getShort()).getDomain();
+	            index += 2;
+	            count +=2;
+	            wordSize = 0;
+	    	}else{
+	    		domain += getWordFromIndex(index);
+	    		index += wordSize + 1;
+	    		count += wordSize + 1;
+	    		wordSize = response[index];
+	    	}
+            start = false;
+            
     	}
-    	return domain;
+    	result.setDomain(domain);
+    	result.setBytes(count);
+    	return result;
+    }
+    private String getWordFromIndex(int index){
+    	String word = "";
+    	int wordSize = response[index];
+    	for(int i =0; i < wordSize; i++){
+    		word += (char) response[index + i + 1];
+		}
+    	return word;
     }
 
     private int getBit(byte b, int position) {
@@ -276,7 +278,9 @@ public class DnsResponse{
                 return QueryType.NS;
             } else if (qType[1] == 15) {
                 return  QueryType.MX;
-            } else {
+            } else if (qType[1] == 5) {
+            	return QueryType.CNAME;
+            }else {
                 throw new RuntimeException("ERROR\tUnrecognized query type in response");
             }
         } else {
