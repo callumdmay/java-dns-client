@@ -47,6 +47,7 @@ public class DnsResponse{
     }
 
     public void outputResponse() {
+        System.out.println();
         if (this.ANCount <= 0  || noRecords) {
             System.out.println("NOTFOUND");
             return;
@@ -57,6 +58,8 @@ public class DnsResponse{
         for (DNSRecord record : records){
         	record.outputRecord();	
         }
+
+        System.out.println();
 
         if (this.ARCount > 0) {
             System.out.println("***Additional Section (" + this.ARCount + " records)***");
