@@ -13,7 +13,7 @@ public class DnsResponse{
     private QueryType queryType;
     private boolean noRecords = false;
 
-	public DnsResponse(byte[] response, int requestSize, QueryType queryType) throws Exception {
+	public DnsResponse(byte[] response, int requestSize, QueryType queryType) {
 		this.response = response;
 		this.queryType = queryType;
 
