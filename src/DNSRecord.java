@@ -1,4 +1,4 @@
-
+	
 public class DNSRecord {
 	 private int ans_ttl, ans_rdLength, ans_mx_preference;
 	 private String ans_name, ans_domain;
@@ -59,38 +59,50 @@ public class DNSRecord {
 		 this.auth = auth;
 	 }
 	 public void outputRecord() {
-	        switch(this.ans_type) {
-	            case A:
-	                this.outputATypeRecords();
-	                break;
-	            case NS:
-	                this.outputNSTypeRecords();
-	                break;
-	            case MX:
-	                this.outputMXTypeRecords();
-	                break;
-	        }
-		}
+        switch(this.ans_type) {
+            case A:
+                this.outputATypeRecords();
+                break;
+            case NS:
+                this.outputNSTypeRecords();
+                break;
+            case MX:
+                this.outputMXTypeRecords();
+                break;
+			case CNAME:
+				this.outputCNameTypeRecords();
+				break;
+			default:
+				break;
+        }
+	}
 
-		private void outputATypeRecords() {
-	        String authString = this.auth ? "auth" : "nonauth";
-	        System.out.println("IP\t" + this.ans_domain + "\t" + this.ans_ttl + "\t" + authString);
-	    }
+	private void outputATypeRecords() {
+        String authString = this.auth ? "auth" : "nonauth";
+        System.out.println("IP\t" + this.ans_domain + "\t" + this.ans_ttl + "\t" + authString);
+    }
 
-	    private void outputNSTypeRecords() {
-	        String authString = this.auth ? "auth" : "nonauth";
-	    	System.out.println("NS\t" + this.ans_domain + "\t" + this.ans_ttl + "\t" + authString);
-	    }
+    private void outputNSTypeRecords() {
+        String authString = this.auth ? "auth" : "nonauth";
+    	System.out.println("NS\t" + this.ans_domain + "\t" + this.ans_ttl + "\t" + authString);
+    }
 
-	    private void outputMXTypeRecords() {
-	    	String authString = this.auth ? "auth" : "nonauth";
-	    	System.out.println("MX\t" + this.ans_domain + "\t" + ans_mx_preference + "\t" + this.ans_ttl + "\t" + authString);
-	    }
-		public int getByteLength() {
-			return byteLength;
-		}
-		public void setByteLength(int byteLength) {
-			this.byteLength = byteLength;
-		}
+    private void outputMXTypeRecords() {
+    	String authString = this.auth ? "auth" : "nonauth";
+    	System.out.println("MX\t" + this.ans_domain + "\t" + ans_mx_preference + "\t" + this.ans_ttl + "\t" + authString);
+    }
+    
+    private void outputCNameTypeRecords() {
+		String authString = this.auth ? "auth" : "nonauth";
+		System.out.println("CNAME\t" + this.ans_domain + "\t" + this.ans_ttl + "\t" + authString);
+    }
+	
+    public int getByteLength() {
+		return byteLength;
+	}
+	
+	public void setByteLength(int byteLength) {
+		this.byteLength = byteLength;
+	}
 
 }

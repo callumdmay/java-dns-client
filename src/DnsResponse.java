@@ -5,17 +5,15 @@ import java.util.ArrayList;
 
 public class DnsResponse{
 	private byte[] response;
-	private int requestSize;
     private byte[] ID;
     private boolean QR, AA, TC, RD, RA;
     private int RCode, QDCount, ANCount, NSCount, ARCount;
     private DNSRecord[] records;
+    private DNSRecord[] additionalRecords;
     private QueryType queryType;
-    //TODO: MX, NS, Parse multiple answers
 
 	public DnsResponse(byte[] response, int requestSize, QueryType queryType) throws Exception {
 		this.response = response;
-		this.requestSize = requestSize;
 		this.queryType = queryType;
 
         this.validateResponseQuestionType();
@@ -27,7 +25,17 @@ public class DnsResponse{
         	records[i] = this.parseAnswer(offSet);
         	offSet += records[i].getByteLength();
         }
-
+        
+        //ns count even though we don't do anything
+        for(int i = 0; i < NSCount; i++){
+        	offSet += parseAnswer(offSet).getByteLength();
+        }
+        
+        additionalRecords = new DNSRecord[ARCount];
+        for(int i = 0; i < ARCount; i++){
+        	additionalRecords[i] = this.parseAnswer(offSet);
+        	offSet += additionalRecords[i].getByteLength();
+        }
         
         this.checkRCodeForErrors();
         this.validateQueryTypeIsResponse();
@@ -46,8 +54,10 @@ public class DnsResponse{
         }
 
         if (this.ARCount > 0) {
-            System.out.println("***Additional Section ([num-additional] records)***");
-            //TODO additional sections
+            System.out.println("***Additional Section (" + this.ARCount + " records)***");
+            for (DNSRecord record : additionalRecords){
+            	record.outputRecord();
+            }
         }
     }
 
@@ -171,7 +181,7 @@ public class DnsResponse{
                 result.setAns_domain(parseMXTypeRDATA(rdLength, countByte, result));
                 break;
             case CNAME:
-                this.parseCNAMETypeRDATA(rdLength, countByte);
+                result.setAns_domain(parseCNAMETypeRDATA(rdLength, countByte));
                 break;
         }
         result.setByteLength(countByte + rdLength - index);
@@ -205,8 +215,11 @@ public class DnsResponse{
     	return getDomainFromIndex(countByte + 2).getDomain();
     }
 
-    private void parseCNAMETypeRDATA(int rdLength, int countByte) {
-        //TODO add support for parsing this type of RDATA
+    private String parseCNAMETypeRDATA(int rdLength, int countByte) {
+		rDataEntry result = getDomainFromIndex(countByte);
+		String cname = result.getDomain();
+    	
+    	return cname;
     }
 
     private void validateQueryTypeIsResponse(){
