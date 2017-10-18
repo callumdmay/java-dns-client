@@ -11,6 +11,7 @@ public class DnsResponse{
     private DNSRecord[] records;
     private DNSRecord[] additionalRecords;
     private QueryType queryType;
+    private boolean noRecords = false;
 
 	public DnsResponse(byte[] response, int requestSize, QueryType queryType) throws Exception {
 		this.response = response;
@@ -36,19 +37,23 @@ public class DnsResponse{
         	additionalRecords[i] = this.parseAnswer(offSet);
         	offSet += additionalRecords[i].getByteLength();
         }
-        
-        this.checkRCodeForErrors();
+        try {
+            this.checkRCodeForErrors();
+        } catch(MissingDomainException e){
+        	noRecords = true;
+        }
+
         this.validateQueryTypeIsResponse();
     }
 
     public void outputResponse() {
-        if (this.ANCount <= 0) {
+        if (this.ANCount <= 0  || noRecords) {
             System.out.println("NOTFOUND");
             return;
         }
 
         System.out.println("***Answer Section (" + this.ANCount + " records)***");
-
+       
         for (DNSRecord record : records){
         	record.outputRecord();	
         }
@@ -183,6 +188,8 @@ public class DnsResponse{
             case CNAME:
                 result.setAns_domain(parseCNAMETypeRDATA(rdLength, countByte));
                 break;
+            case OTHER:
+            	break;
         }
         result.setByteLength(countByte + rdLength - index);
         return result;
@@ -296,10 +303,12 @@ public class DnsResponse{
             } else if (qType[1] == 5) {
             	return QueryType.CNAME;
             }else {
-                throw new RuntimeException("ERROR\tUnrecognized query type in response");
+            	return QueryType.OTHER;
+//                throw new RuntimeException("ERROR\tUnrecognized query type in response");
             }
         } else {
-            throw new RuntimeException("ERROR\tUnrecognized query type in response");
+        	return QueryType.OTHER;
+//        	throw new RuntimeException("ERROR\tUnrecognized query type in response");
         }
     }
 }

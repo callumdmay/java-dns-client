@@ -70,9 +70,6 @@ public class DnsClient {
             System.out.println("ERROR\tSocket Timeout");
             System.out.println("Reattempting request...");
             pollRequest(++retryNumber);
-        } catch (MissingDomainException e) {
-            //Has to be this exact phrase as per the assignment
-            System.out.println("NOTFOUND");
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
