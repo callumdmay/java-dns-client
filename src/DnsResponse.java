@@ -168,7 +168,7 @@ public class DnsResponse{
                 result.setAns_domain(parseNSTypeRDATA(rdLength, countByte));
                 break;
             case MX:
-                result.setAns_domain(parseMXTypeRDATA(rdLength, countByte));
+                result.setAns_domain(parseMXTypeRDATA(rdLength, countByte, result));
                 break;
             case CNAME:
                 this.parseCNAMETypeRDATA(rdLength, countByte);
@@ -198,9 +198,11 @@ public class DnsResponse{
     	return nameServer;
     }
 
-    private String parseMXTypeRDATA(int rdLength, int countByte) {
-        //TODO add support for parsing this type of RDATA
-    	return null;
+    private String parseMXTypeRDATA(int rdLength, int countByte, DNSRecord record) {
+    	byte[] mxPreference= {this.response[countByte], this.response[countByte + 1]};
+    	ByteBuffer buf = ByteBuffer.wrap(mxPreference);
+    	record.setAns_mx_preference(buf.getShort());
+    	return getDomainFromIndex(countByte + 2).getDomain();
     }
 
     private void parseCNAMETypeRDATA(int rdLength, int countByte) {

@@ -83,7 +83,8 @@ public class DNSRecord {
 	    }
 
 	    private void outputMXTypeRecords() {
-
+	    	String authString = this.auth ? "auth" : "nonauth";
+	    	System.out.println("MX\t" + this.ans_domain + "\t" + ans_mx_preference + "\t" + this.ans_ttl + "\t" + authString);
 	    }
 		public int getByteLength() {
 			return byteLength;
