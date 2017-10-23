@@ -40,6 +40,7 @@ public class DnsClient {
         }
 
         try {
+            //Create Datagram socket and request object(s)
             DatagramSocket socket = new DatagramSocket();
             socket.setSoTimeout(timeout);
             InetAddress inetaddress = InetAddress.getByAddress(server);
@@ -51,6 +52,7 @@ public class DnsClient {
             DatagramPacket requestPacket = new DatagramPacket(requestBytes, requestBytes.length, inetaddress, port);
             DatagramPacket responsePacket = new DatagramPacket(responseBytes, responseBytes.length);
 
+            //Send packet and time response
             long startTime = System.currentTimeMillis();
             socket.send(requestPacket);
             socket.receive(responsePacket);

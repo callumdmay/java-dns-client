@@ -1,14 +1,13 @@
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 
 public class DnsResponse{
 	private byte[] response;
     private byte[] ID;
     private boolean QR, AA, TC, RD, RA;
     private int RCode, QDCount, ANCount, NSCount, ARCount;
-    private DNSRecord[] records;
+    private DNSRecord[] answerRecords;
     private DNSRecord[] additionalRecords;
     private QueryType queryType;
     private boolean noRecords = false;
@@ -20,11 +19,11 @@ public class DnsResponse{
         this.validateResponseQuestionType();
         this.parseHeader();
         
-        records = new DNSRecord[ANCount];
+        answerRecords = new DNSRecord[ANCount];
         int offSet = requestSize;
         for(int i = 0; i < ANCount; i ++){
-        	records[i] = this.parseAnswer(offSet);
-        	offSet += records[i].getByteLength();
+        	answerRecords[i] = this.parseAnswer(offSet);
+        	offSet += answerRecords[i].getByteLength();
         }
         
         //ns count even though we don't do anything
@@ -53,16 +52,16 @@ public class DnsResponse{
             return;
         }
 
-        System.out.println("***Answer Section (" + this.ANCount + " records)***");
+        System.out.println("***Answer Section (" + this.ANCount + " answerRecords)***");
        
-        for (DNSRecord record : records){
+        for (DNSRecord record : answerRecords){
         	record.outputRecord();	
         }
 
         System.out.println();
 
         if (this.ARCount > 0) {
-            System.out.println("***Additional Section (" + this.ARCount + " records)***");
+            System.out.println("***Additional Section (" + this.ARCount + " answerRecords)***");
             for (DNSRecord record : additionalRecords){
             	record.outputRecord();
             }
@@ -145,14 +144,14 @@ public class DnsResponse{
         domain = domainResult.getDomain();
         
         //Name
-        result.setAns_name(domain);
+        result.setName(domain);
 
         //TYPE
         byte[] ans_type = new byte[2];
         ans_type[0] = response[countByte];
         ans_type[1] = response[countByte + 1];
         
-        result.setAns_type(getQTYPEFromByteArray(ans_type));
+        result.setQueryType(getQTYPEFromByteArray(ans_type));
 
         countByte += 2;
         //CLASS
@@ -162,34 +161,34 @@ public class DnsResponse{
         if (ans_class[0] != 0 && ans_class[1] != 1) {
             throw new RuntimeException(("ERROR\tThe class field in the response answer is not 1"));
         }
-        result.setAns_class(ans_class);
+        result.setQueryClass(ans_class);
 
         countByte +=2;
         //TTL
         byte[] TTL = { response[countByte], response[countByte + 1], response[countByte + 2], response[countByte + 3] };
         ByteBuffer wrapped = ByteBuffer.wrap(TTL);
-        result.setAns_ttl(wrapped.getInt());
+        result.setTimeToLive(wrapped.getInt());
 
         countByte +=4;
         //RDLength
         byte[] RDLength = { response[countByte], response[countByte + 1] };
         wrapped = ByteBuffer.wrap(RDLength);
         int rdLength = wrapped.getShort();
-        result.setAns_rdLength(rdLength);
+        result.setRdLength(rdLength);
 
         countByte +=2;
-        switch (result.getAns_type()) {
+        switch (result.getQueryType()) {
             case A:
-                result.setAns_domain(parseATypeRDATA(rdLength, countByte));
+                result.setDomain(parseATypeRDATA(rdLength, countByte));
                 break;
             case NS:
-                result.setAns_domain(parseNSTypeRDATA(rdLength, countByte));
+                result.setDomain(parseNSTypeRDATA(rdLength, countByte));
                 break;
             case MX:
-                result.setAns_domain(parseMXTypeRDATA(rdLength, countByte, result));
+                result.setDomain(parseMXTypeRDATA(rdLength, countByte, result));
                 break;
             case CNAME:
-                result.setAns_domain(parseCNAMETypeRDATA(rdLength, countByte));
+                result.setDomain(parseCNAMETypeRDATA(rdLength, countByte));
                 break;
             case OTHER:
             	break;
@@ -221,7 +220,7 @@ public class DnsResponse{
     private String parseMXTypeRDATA(int rdLength, int countByte, DNSRecord record) {
     	byte[] mxPreference= {this.response[countByte], this.response[countByte + 1]};
     	ByteBuffer buf = ByteBuffer.wrap(mxPreference);
-    	record.setAns_mx_preference(buf.getShort());
+    	record.setMxPreference(buf.getShort());
     	return getDomainFromIndex(countByte + 2).getDomain();
     }
 
