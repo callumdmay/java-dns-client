@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="java-dns-client:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/java_dns_client_jar</output-path>
+    <root id="archive" name="java-dns-client.jar">
+      <element id="module-output" name="java-dns-client" />
+    </root>
+  </artifact>
+</component>
